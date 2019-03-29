@@ -2,9 +2,6 @@ var express = require('express')
 var app = express()
 var exec = require('child_process').exec;
 var fs = require('fs')
-var bodyParser = require('body-parser');
-//app.use(bodyParser.text({ inflate: true, limit: '100kb', type: 'text/html' }));
-//app.use(bodyParser.urlencoded({ extended: false }));
 
 var requestNumber = 0;
 
@@ -14,25 +11,32 @@ app.get("/", (req, res)=> {
 })
 
 app.post("/:format", (req, res)=> {
-  
+    
+    let format = req.params['format']
     let body = '';
     req.on('data', chunk => {
-        body += chunk.toString(); // convert Buffer to string
+        body += chunk.toString();
     });
     req.on('end', () => {
         let dataFileName = "./" + (requestNumber) + ".dot";
-        let outputFileName = "./" + (requestNumber) + ".pdf";
+        let outputFileName = "./" + (requestNumber) + "." + format;
         fs.writeFile(dataFileName, body, (err)=> {
             requestNumber++;
             if (err) {
                 res.send("Request failed.");
             } else {
-                exec("dot " + dataFileName + " -Tpdf -o" + outputFileName, (err) => {
+                exec("dot " + dataFileName + " -T"+  format + " -o" + outputFileName, (err) => {
                     if (err) {
                         res.send("Parsing failed.");
                     } else {
                         fs.readFile(outputFileName, (err, data)=> {
                             res.send(data)
+                        }, ()=> {
+                            exec("rm " + dataFileName + " " + outputFileName, (err) => {
+                                if (err) {
+                                    console.log("Failed to cleanup.");
+                                }
+                            })
                         })
                     }
                 })
